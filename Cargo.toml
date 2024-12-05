@@ -1,0 +1,9 @@
+[package]
+name = "gui_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.29.1"
+egui = "0.29.1"
+gilrs = "0.10"
