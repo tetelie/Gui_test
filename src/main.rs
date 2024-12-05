@@ -1,45 +1,48 @@
 use eframe::egui;
-use gilrs::{Gilrs, Button, Event, EventType};
+use gilrs::{Axis, Button, Event, EventType, Gilrs};
 
 fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
-        "GUI with Gamepad",
+        "Gamepad Tester",
         eframe::NativeOptions::default(),
-        Box::new(|_cc| Ok(Box::new(GamepadApp::new()))),
+        Box::new(|_cc| Ok(Box::new(GamepadTesterApp::new()))),
     )
 }
 
-struct GamepadApp {
+struct GamepadTesterApp {
     gilrs: Gilrs,
-    selected_item: usize,
-    items: Vec<String>,
+    last_event: String,
+    pressed_buttons: Vec<String>,
+    axis_values: Vec<String>,
 }
 
-impl GamepadApp {
+impl GamepadTesterApp {
     fn new() -> Self {
         let gilrs = Gilrs::new().unwrap();
         Self {
             gilrs,
-            selected_item: 0,
-            items: vec!["Option 1".to_string(), "Option 2".to_string(), "Option 3".to_string()],
+            last_event: "No event yet".to_string(),
+            pressed_buttons: vec![],
+            axis_values: vec![],
         }
     }
 
     fn handle_gamepad_input(&mut self) {
+        self.pressed_buttons.clear();
+        self.axis_values.clear();
+
         while let Some(Event { event, .. }) = self.gilrs.next_event() {
             match event {
-                EventType::ButtonPressed(Button::DPadUp, ..) => {
-                    if self.selected_item > 0 {
-                        self.selected_item -= 1;
-                    }
+                EventType::ButtonPressed(button, ..) => {
+                    self.last_event = format!("Button Pressed: {:?}", button);
+                    self.pressed_buttons.push(format!("{:?}", button));
                 }
-                EventType::ButtonPressed(Button::DPadDown, ..) => {
-                    if self.selected_item < self.items.len() - 1 {
-                        self.selected_item += 1;
-                    }
+                EventType::ButtonReleased(button, ..) => {
+                    self.last_event = format!("Button Released: {:?}", button);
                 }
-                EventType::ButtonPressed(Button::South, ..) => {
-                    println!("Selected: {}", self.items[self.selected_item]);
+                EventType::AxisChanged(axis, value, ..) => {
+                    self.last_event = format!("Axis Changed: {:?}, Value: {:.2}", axis, value);
+                    self.axis_values.push(format!("{:?}: {:.2}", axis, value));
                 }
                 _ => {}
             }
@@ -47,19 +50,29 @@ impl GamepadApp {
     }
 }
 
-impl eframe::App for GamepadApp {
+impl eframe::App for GamepadTesterApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Handle gamepad input
         self.handle_gamepad_input();
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label("Use the gamepad to navigate and select:");
+        // Force a repaint every frame
+        ctx.request_repaint();
 
-            for (i, item) in self.items.iter().enumerate() {
-                if i == self.selected_item {
-                    ui.label(format!("> {}", item));
-                } else {
-                    ui.label(item);
-                }
+        // Build the UI
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("Gamepad Tester");
+            ui.label(format!("Last Event: {}", self.last_event));
+
+            ui.separator();
+            ui.label("Pressed Buttons:");
+            for button in &self.pressed_buttons {
+                ui.label(format!("- {}", button));
+            }
+
+            ui.separator();
+            ui.label("Axis Values:");
+            for axis in &self.axis_values {
+                ui.label(format!("- {}", axis));
             }
         });
     }
